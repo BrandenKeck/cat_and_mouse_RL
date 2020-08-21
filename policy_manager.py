@@ -41,7 +41,7 @@ class policy_manager():
         elif self.policy_type[len(self.policy_type)-1] == 1:
             return random_policy(action_values)
         elif self.policy_type[len(self.policy_type)-1] == 2:
-            return e_greedy_policy(action_values, self.epsilon[len(self.epsilon)-1])
+            return e_greedy_policy(action_values, self.epsilons[len(self.epsilons)-1])
         elif self.policy_type[len(self.policy_type) - 1] == 3:
             return normalized_q_table_soft_policy(action_values)
         else:

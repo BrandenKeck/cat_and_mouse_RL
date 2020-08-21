@@ -25,6 +25,7 @@ class qnetwork():
         self.Q = []
         self.Q_target = []
         self.action_values = np.ones(num_actions)
+        self.previous_state_terminal = False
 
         # DQN Parameters
         self.replay_memory_capacity = 800
@@ -39,23 +40,22 @@ class qnetwork():
         self.network_reset_counter = 0
 
     # Run the DQN method
-    def dqn(self, state, prev_reward, prev_action):
+    def dqn(self, current_state, current_state_is_terminal, prev_reward, prev_action):
 
         # Initialize DQN Neural Network Objects if first pass
         if self.Q == [] or self.Q_target == []:
-            self.initialize_q_network(state)
+            self.initialize_q_network(current_state)
             self.Q_target = deepcopy(self.Q)
             return
 
         # Update Standard Replay Memory Queues
-        self.update_replay_memory(state, prev_reward, prev_action)
+        self.update_replay_memory(current_state, current_state_is_terminal, prev_reward, prev_action)
         if len(self.replay_memory.preprocessed_states) < 2: return
 
-        # Get target labels from Q network predictions
+        # Get target labels from Q network predictions and append to replay memory
         predicted_Q = []
         for q in self.Q_target:
             predicted_Q.append(q.classify_data(self.replay_memory.preprocessed_states[len(self.replay_memory.preprocessed_states) - 1]))
-
         target_label = (prev_reward + self.discount_factor * max(predicted_Q))
         self.update_queue(self.replay_memory.q_target_labels, target_label.tolist()[0][0], self.replay_memory_capacity)
 
@@ -115,7 +115,7 @@ class qnetwork():
         self.replay_memory.q_target_labels = labels.tolist()
 
     # Function to update universally-used state, action, and reward queues
-    def update_replay_memory(self, state, prev_reward, prev_action):
+    def update_replay_memory(self, state, is_terminal, prev_reward, prev_action):
 
         # Create a queue of last states to be concatenated for the Q learning network input
         # If the state queue has not been initialized to the required length, return to parent function
@@ -128,7 +128,12 @@ class qnetwork():
         preprocessed_state = [state for s in self.replay_memory.state_queue for state in s]
         preprocessed_state = np.array(preprocessed_state).reshape((len(preprocessed_state), 1))
         self.update_queue(self.replay_memory.preprocessed_states, preprocessed_state, self.replay_memory_capacity+1)
-        if len(self.replay_memory.preprocessed_states) < 2: return
+
+        # Handle Initial
+        if len(self.replay_memory.preprocessed_states) < 2:
+            self.update_queue(self.replay_memory.actions, prev_action, self.replay_memory_capacity)
+            self.update_queue(self.replay_memory.rewards, prev_reward, self.replay_memory_capacity)
+            return
 
         # Update action and reward to the appropriate queues
         self.update_queue(self.replay_memory.actions, prev_action, self.replay_memory_capacity)
@@ -156,6 +161,7 @@ class qnetwork():
         if length > 0:
             while(len(queue) > length): queue.pop(0)
 
+    # Function to plot mean squared errors of the Q networks
     def plot_network_errors(self):
         aes = ['k-', 'r-', 'b-', 'g-', 'm-', 'k--', 'r--', 'b--', 'g--', 'm--', 'k-.', 'r-.', 'b-.', 'g-.', 'm-.', 'k.', 'r.', 'b.', 'g.', 'm.']
         for i, q in enumerate(self.Q):
@@ -169,6 +175,7 @@ class replay_memory():
     def __init__(self):
         self.state_queue = []
         self.preprocessed_states = []
+        self.preprocessed_states_is_terminal = []
         self.actions = []
         self.rewards = []
         self.q_target_labels = []
