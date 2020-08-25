@@ -14,15 +14,15 @@ class player():
 
         # Initialize player attributes
         self.name = name
-        self.img = img
         self.team = 1
         self.num_actions = num_actions
+        self.img = img
 
         # Initialize position for episode memory
         self.init_x = x
         self.init_y = y
 
-        # Position attributes
+        # Position attributes (game params)
         self.x = x
         self.y = y
         self.target_x = x
@@ -41,8 +41,10 @@ class player():
         self.next_state_is_terminal = False
         self.current_policy = np.ones(num_actions)/num_actions
 
-        # Attempt to get stored learning structures
+        # Learning object structure / storage parameters
+        self.reset_stored_training_data = False
         self.qtable, self.qnetwork = self.get_player_data()
+        self.qnetwork_layersizes = [256, 128]
         self.policy_manager = policy_manager()
         self.save_after_iter = 5000
         self.save_after_iter_counter = self.save_after_iter
@@ -94,7 +96,7 @@ class player():
 
         # Handle First Pass for Learning Objects
         if self.qtable == None: self.qtable = qtable(self.num_actions, self.alpha, self.gamma)
-        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, [256, 128], self.alpha, self.gamma)
+        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, self.qnetwork_layersizes, self.alpha, self.gamma)
 
         # Initialize Uniform Action Values / Error Prevention / No Learning Method Selected
         action_values = np.ones(self.num_actions)
@@ -135,13 +137,16 @@ class player():
 
     # Search for stored state/policy file
     def get_player_data(self):
-        try:
-            # Read stored player information if it exists
-            with open(self.name + ".txt", 'rb') as file:
-                qtable, qnetwork = pickle.load(file)
-            return qtable, qnetwork
-        except:
-            # Initialize empty player information if no file found
+        if not self.reset_stored_training_data:
+            try:
+                # Read stored player information if it exists
+                with open(self.name + ".txt", 'rb') as file:
+                    qtable, qnetwork = pickle.load(file)
+                return qtable, qnetwork
+            except:
+                # Initialize empty player information if no file found
+                return None, None
+        else:
             return None, None
 
     # Store player data for use in subsequent simulations
