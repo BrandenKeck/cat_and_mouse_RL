@@ -188,7 +188,7 @@ class world():
     def check_episode_completion(self):
 
         # Handle timelimit reached
-        if self.current_time >= self.timelimit:
+        if self.current_time >= self.timelimit and self.timelimit > 0:
 
             for p in self.players:
                 p.next_reward = self.player_timelimit_penalty
@@ -200,7 +200,7 @@ class world():
             # Reset simulation and print results
             self.reset()
             self.episode_count = self.episode_count + 1
-            print("Completed Episodes:  " + str(self.episode_count))
+            print("Completed Episodes:  " + str(self.episode_count) + " (EPISODE TIMEOUT)")
 
             return True
 
@@ -310,11 +310,11 @@ class world():
         #     Otherwise, space is team #
         state = np.zeros([self.xsize, self.ysize])
         for p in self.players:
-            state[p.x][p.y] = p.team
+            state[p.x][p.y] = -p.team
         for g in self.goals:
-            state[g.x][g.y] = -2
+            state[g.x][g.y] = 100
         for w in self.walls:
-            state[w.x][w.y] = -3
+            state[w.x][w.y] = -10
 
         state[xx][yy] = -1
 
@@ -440,6 +440,11 @@ class world():
     ###
     # AGENT LEARNING PARAM FUNCTIONS - APPLY TO BOTH PLAYERS AND GOALS
     ###
+
+    # Set Time Limit for each Simulation
+    def set_timelimit(self, val):
+        self.timelimit = val
+        print("TIMELIMIT UPDATED TO " + str(val) + " ITERATIONS")
 
     # Functions for setting the "alpha" (learning rate) parameter, either globally or to an agent by name
     def set_global_learning_rate(self, val):

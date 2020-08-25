@@ -48,8 +48,9 @@ class player():
         self.save_after_iter_counter = self.save_after_iter
 
         # Learning Settings for the agent
-        self.use_q_learning = True
+        self.use_q_learning = False
         self.use_dqn = False
+        self.use_ddqn = True
 
     '''-----------------
     BEGIN PRIMARY FUNCTIONS
@@ -93,9 +94,9 @@ class player():
 
         # Handle First Pass for Learning Objects
         if self.qtable == None: self.qtable = qtable(self.num_actions, self.alpha, self.gamma)
-        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, [50, 20, 5], self.alpha, self.gamma)
+        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, [256, 128], self.alpha, self.gamma)
 
-        # Initialize Uniform Action Values / Error Prevention
+        # Initialize Uniform Action Values / Error Prevention / No Learning Method Selected
         action_values = np.ones(self.num_actions)
 
         # Q-Learning Method uses the QTable Custom Class Object
@@ -106,10 +107,17 @@ class player():
             action_values = self.qtable.action_values[self.qtable.next_state_idx].tolist()
 
         # DQN Method uses the QNetwork Custom Class Object
-        if self.use_dqn:
+        elif self.use_dqn:
 
             # Learn using DQN method
             self.qnetwork.dqn(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal, self.next_reward, self.last_action)
+            action_values = self.qnetwork.action_values
+
+        # DDQN Method uses the QNetwork Custom Class Object
+        elif self.use_ddqn:
+
+            # Learn using DDQN method
+            self.qnetwork.ddqn(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal,self.next_reward, self.last_action)
             action_values = self.qnetwork.action_values
 
         # Update Policy based on user settings
