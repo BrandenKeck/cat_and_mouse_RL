@@ -33,8 +33,8 @@ class player():
         self.target_pos_y = 25 * y
 
         # Learning params and attributes
-        self.alpha = 0.1
-        self.gamma = 0.65
+        self.alpha = 0.01
+        self.gamma = 0.85
         self.last_action = 0
         self.next_reward = 0
         self.next_state = None
@@ -44,7 +44,7 @@ class player():
         # Learning object structure / storage parameters
         self.reset_stored_training_data = False
         self.qtable, self.qnetwork = self.get_player_data()
-        self.qnetwork_layersizes = [256, 128]
+        self.qnetwork_hidden_layer_sizes = [256, 128]
         self.policy_manager = policy_manager()
         self.save_after_iter = 5000
         self.save_after_iter_counter = self.save_after_iter
@@ -96,7 +96,7 @@ class player():
 
         # Handle First Pass for Learning Objects
         if self.qtable == None: self.qtable = qtable(self.num_actions, self.alpha, self.gamma)
-        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, self.qnetwork_layersizes, self.alpha, self.gamma)
+        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, self.qnetwork_hidden_layer_sizes, self.alpha, self.gamma)
 
         # Initialize Uniform Action Values / Error Prevention / No Learning Method Selected
         action_values = np.ones(self.num_actions)

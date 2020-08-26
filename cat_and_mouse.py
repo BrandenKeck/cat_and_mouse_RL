@@ -379,7 +379,6 @@ class world():
 
     # Import image data and set to variables (Cat / Mouse / Wall characters)
     def set_images(self):
-
         os.chdir(os.path.dirname(sys.argv[0]))
         self.player_imgs = spritesheet.make_sprite_array(spritesheet.spritesheet('../../../img/cats.png'), 5, 25, 25)
         self.goal_imgs = spritesheet.make_sprite_array(spritesheet.spritesheet('../../../img/mouse.png'), 1, 25, 25)
@@ -442,10 +441,20 @@ class world():
     def set_global_learning_rate(self, val):
         for a in self.players + self.goals:
             a.alpha = val
+            if a.qtable != None: a.qtable.learning_rate = val
+            if a.qnetwork != None:
+                a.qnetwork.learning_rate = val
+                for q in a.qnetwork.Q:
+                    q.learning_rates = val * np.ones(len(a.qnetwork.hidden_layer_sizes) + 2)
     def set_agent_learning_rate(self, name, val):
         for a in self.players + self.goals:
             if a.name == name:
                 a.alpha = val
+                if a.qtable != None: a.qtable.learning_rate = val
+                if a.qnetwork != None:
+                    a.qnetwork.learning_rate = val
+                    for q in a.qnetwork.Q:
+                        q.learning_rates = val * np.ones(len(a.qnetwork.hidden_layer_sizes) + 2)
                 return
         print("ERROR: PLAYER " + name + " NOT FOUND")
 
@@ -453,10 +462,14 @@ class world():
     def set_global_discount_factor(self, val):
         for a in self.players + self.goals:
             a.gamma = val
+            if a.qtable != None: a.qtable.discount_factor = val
+            if a.qnetwork != None: a.qnetwork.discount_factor = val
     def set_agent_discount_factor(self, name, val):
         for a in self.players + self.goals:
             if a.name == name:
                 a.gamma = val
+                if a.qtable != None: a.qtable.discount_factor = val
+                if a.qnetwork != None: a.qnetwork.discount_factor = val
                 return
         print("ERROR: PLAYER " + name + " NOT FOUND")
 
@@ -481,16 +494,16 @@ class world():
         for a in self.players + self.goals:
             if policy == "random":
                 a.policy_manager.default_policy = 1
-                print("RANDOM SET AS DEFAULT FOR ALL AGENTS.")
+                print("RANDOM SET AS DEFAULT FOR AGENT " + a.name + ".")
             elif policy == "e-greedy":
                 a.policy_manager.default_policy = 2
-                print("e-GREEDY (e = " + str(epsilon) + ") SET AS DEFAULT FOR ALL AGENTS.")
+                print("e-GREEDY (e = " + str(epsilon) + ") SET AS DEFAULT FOR AGENT " + a.name + ".")
             elif policy == "normalized-q":
                 a.policy_manager.default_policy = 3
-                print("NORMALIZED Q TABLE POLICY SET AS DEFAULT FOR ALL AGENTS.")
+                print("NORMALIZED Q TABLE POLICY SET AS DEFAULT FOR AGENT " + a.name + ".")
             else:
                 a.policy_manager.default_policy = 3
-                print("NORMALIZED Q TABLE POLICY SET AS DEFAULT FOR ALL AGENTS.")
+                print("NORMALIZED Q TABLE POLICY SET AS DEFAULT FOR AGENT " + a.name + ".")
 
     # Set the default for an agent by name
     def set_agent_default_policy(self, name, policy="normalized-q", epsilon=0.025):
@@ -550,9 +563,7 @@ class world():
     # AGENT NETWORK FUNCTIONS - APPLY TO BOTH PLAYERS AND GOALS
     ###
 
-    ###
-    # AGENT TABULAR LEARNING FUNCTIONS - APPLY TO BOTH PLAYERS AND GOALS
-    ###
+
 
     ###
     # MISC FUNCTIONS
@@ -566,10 +577,10 @@ class world():
 
     # Change team of player by player name (Team Default is 1; Options are 1 through 5)
     def set_player_team(self, name, team):
-        if team > 5:
-            team = 5
+        if team < 1 or team > 5:
+            team = 1
             print("ERROR: MAXIMUM NUMBER OF TEAMS IS 5")
-            print(">> SETTING PLAYER " + name + " TO TEAM #5")
+            print(">> SETTING PLAYER " + name + " TO TEAM #1")
         for p in self.players:
             if p.name == name:
                 p.team = team

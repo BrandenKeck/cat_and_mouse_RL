@@ -44,7 +44,7 @@ class neural_network():
         # Error Tracking - Diagnostics
         self.mean_squared_errors = []
         self.relative_squared_errors = []
-        self.number_of_stored_errors = 50000
+        self.number_of_stored_errors = 500000
 
     # Function to perform NN training steps (iterative prediction / backpropagation)
     def train_network(self, data, labels, iter):
