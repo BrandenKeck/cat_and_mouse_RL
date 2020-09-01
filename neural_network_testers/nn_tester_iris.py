@@ -3,6 +3,7 @@ import sys
 sys.path.append("..")
 
 import numpy as np
+import matplotlib.pyplot as plt
 from neural_network import neural_network
 
 from sklearn.datasets import load_iris
@@ -18,9 +19,19 @@ X_train, X_test, Y_train, Y_test = train_test_split(XT, newYT, test_size=0.2)
 X = np.array(X_train).T
 Y = np.array(Y_train).T
 
-myNet = neural_network([4, 16, 4, 3])
-myNet.training_batch_size = 20
-myNet.train_network(X, Y, 100000)
+learning_rates = [0.0005]
+errors = []
+aes = ['r-', 'b-', 'g-', 'm-', 'k-', 'r--', 'b--', 'g--', 'm--', 'k--', 'r-.', 'b-.', 'g-.', 'm-.','k-.', 'r.', 'b.', 'g.', 'm.', 'k.']
+for rate in learning_rates:
+    myNet = neural_network([4, 256, 128, 3])
+    myNet.training_batch_size = 1
+    myNet.learning_rates = rate * np.ones(3)
+    myNet.train_network(X, Y, 100000)
+    errors.append(myNet.mean_squared_errors)
+
+for i in np.arange(len(errors)):
+    plt.plot(errors[i], aes[i])
+plt.show()
 
 X = np.array(X_test).T
 Y = np.array(Y_test).T

@@ -6,6 +6,7 @@ import numpy as np
 from policy_manager import policy_manager
 from qtable import qtable
 from qnetwork import qnetwork
+from policy_gradient_methods import policy_gradients
 
 # Define a class to be used universally by all players, including movable goals
 class player():
@@ -43,8 +44,14 @@ class player():
 
         # Learning object structure / storage parameters
         self.reset_stored_training_data = False
-        self.qtable, self.qnetwork = self.get_player_data()
+        self.qtable, self.qnetwork, self.policy_gradients = self.get_player_data()
         self.qnetwork_hidden_layer_sizes = [256, 128]
+        self.qnetwork_replay_memory_capacity = 1000
+        self.qnetwork_network_reset_frequency = 250
+        self.qnetwork_network_minibatch_size = 100
+        self.qnetwork_network_training_delay = 50
+        self.qnetwork_network_training_iter = 10
+        self.qnetwork_state_queue_length = 1
         self.policy_manager = policy_manager()
         self.save_after_iter = 5000
         self.save_after_iter_counter = self.save_after_iter
@@ -53,6 +60,7 @@ class player():
         self.use_q_learning = False
         self.use_dqn = False
         self.use_ddqn = True
+        self.use_REINFORCE = False
 
     '''-----------------
     BEGIN PRIMARY FUNCTIONS
@@ -96,7 +104,18 @@ class player():
 
         # Handle First Pass for Learning Objects
         if self.qtable == None: self.qtable = qtable(self.num_actions, self.alpha, self.gamma)
-        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, self.qnetwork_hidden_layer_sizes, self.alpha, self.gamma)
+        if self.qnetwork == None: self.qnetwork = qnetwork(self.num_actions, self.qnetwork_hidden_layer_sizes, self.alpha, self.gamma,
+                                                           self.qnetwork_replay_memory_capacity,
+                                                           self.qnetwork_network_reset_frequency,
+                                                           self.qnetwork_network_minibatch_size,
+                                                           self.qnetwork_network_training_delay,
+                                                           self.qnetwork_network_training_iter,
+                                                           self.qnetwork_state_queue_length)
+        if self.policy_gradients == None: self.policy_gradients = policy_gradients(self.num_actions)
+        '''
+        TODO
+        Pass params as PG inputs
+        '''
 
         # Initialize Uniform Action Values / Error Prevention / No Learning Method Selected
         action_values = np.ones(self.num_actions)
@@ -122,6 +141,13 @@ class player():
             self.qnetwork.ddqn(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal,self.next_reward, self.last_action)
             action_values = self.qnetwork.action_values
 
+        # REINFORCE Method uses the Policy Gradients Custom Class Object
+        elif self.use_REINFORCE:
+
+            # Learn using the REINFORCE method
+            self.policy_gradients.REINFORCE(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal,self.next_reward, self.last_action)
+            action_values = self.policy_gradients.current_policy
+
         # Update Policy based on user settings
         self.current_policy = self.policy_manager.generate_policy(action_values)
 
@@ -141,11 +167,11 @@ class player():
             try:
                 # Read stored player information if it exists
                 with open(self.name + ".txt", 'rb') as file:
-                    qtable, qnetwork = pickle.load(file)
-                return qtable, qnetwork
+                    qtable, qnetwork, policy_gradients = pickle.load(file)
+                return qtable, qnetwork, policy_gradients
             except:
                 # Initialize empty player information if no file found
-                return None, None
+                return None, None, None
         else:
             return None, None
 
@@ -154,7 +180,7 @@ class player():
         try:
             # Write Player Data to Stored File
             with open(self.name + ".txt", 'wb') as file:
-                pickle.dump((self.qtable, self.qnetwork), file)
+                pickle.dump((self.qtable, self.qnetwork, self.policy_gradients), file)
         except:
             pass
 

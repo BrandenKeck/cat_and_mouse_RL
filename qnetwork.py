@@ -9,31 +9,31 @@ from neural_network import neural_network
 # Create a Q-Learning Setup for Deep Q Learning
 class qnetwork():
 
-    def __init__(self, num_actions, hidden_layer_sizes, learning_rate, discount_factor):
+    def __init__(self, na, hls, lr, df, rmc, nrf, nms, ntd, nti, sql):
 
         # Init number of possible actions per state (network output layer)
         # Init hidden layer sizes
-        self.num_actions = num_actions
-        self.hidden_layer_sizes = hidden_layer_sizes
+        self.num_actions = na
+        self.hidden_layer_sizes = hls
 
         # Init Learning Parameters
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
+        self.learning_rate = lr
+        self.discount_factor = df
 
         # Init Empty Learning objects
         self.replay_memory = replay_memory()
         self.Q = []
         self.Q_target = []
-        self.action_values = np.ones(num_actions)
+        self.action_values = np.ones(na)
 
         # DQN Parameters
         self.training_mode = True
-        self.replay_memory_capacity = 1000
-        self.network_reset_frequency = 250
-        self.network_minibatch_size = 100
-        self.network_training_delay = 50
-        self.network_training_iter = 10
-        self.state_queue_length = 1
+        self.replay_memory_capacity = rmc
+        self.network_reset_frequency = nrf
+        self.network_minibatch_size = nms
+        self.network_training_delay = ntd
+        self.network_training_iter = nti
+        self.state_queue_length = sql
 
         # Init counters
         self.network_training_delay_counter = 0
@@ -213,9 +213,20 @@ class qnetwork():
         # Create the Q neural networks (one for each action) and init basic settings
         for i in np.arange(self.num_actions):
             self.Q.append(neural_network(layer_sizes))
-            self.Q[i].learning_rates = self.learning_rate * np.ones(len(layer_sizes))
-            self.Q[i].use_sigmoid[len(self.Q[i].use_sigmoid) - 1] = False
-            self.Q[i].use_linear[len(self.Q[i].use_linear) - 1] = True
+            self.Q[i].learning_rates = self.learning_rate * np.ones((len(layer_sizes) - 1))
+            self.leaky_relu_rates = 0.01 * np.ones(len(layer_sizes) - 1)
+            self.huber_cost_delta = 5
+            self.Q[i].use_huber_cost = True
+            self.Q[i].use_hellinger_cost = False
+            self.Q[i].use_quadratic_cost = False
+            self.Q[i].use_cross_entropy_cost = False
+            self.Q[i].use_merged_softmax_cross_entropy_cost = False
+            self.Q[i].use_leaky_relu = [True] * (len(layer_sizes) - 2) + [False]
+            self.Q[i].use_softmax = [False] * (len(layer_sizes) - 1)
+            self.Q[i].use_sigmoid = [False] * (len(layer_sizes) - 1)
+            self.Q[i].use_relu = [False] * (len(layer_sizes) - 1)
+            self.Q[i].use_linear = [False] * (len(layer_sizes) - 2) + [True]
+            self.Q[i].use_tanh = [False] * (len(layer_sizes) - 1)
 
     # Function for updating rolling queues
     def update_queue(self, queue, obj, length):

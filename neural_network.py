@@ -3,16 +3,15 @@ import numpy as np
 # Neural Network Class for Feature Approximation in Reinforcement Learning
 class neural_network():
 
-    def __init__(self, layer_sizes):
+    def __init__(self, layersizes):
 
         # Track layersizes as a numpy array
-        self.layersizes = np.array([int(i) for i in layer_sizes])
+        self.layersizes = np.array([int(i) for i in layersizes])
 
         # Initialize Node Arrays
         self.a = []
         self.z = []
         self.y_hat = None
-        self.y_prob = None
 
         # Initialize Weight Arrays
         self.w = []
@@ -29,15 +28,18 @@ class neural_network():
 
         # Initialize Cost Function Settings
         # DEFAULT: Huber Cost Function
-        self.use_huber_cost = True
+        self.use_huber_cost = False
         self.use_hellinger_cost = False
         self.use_quadratic_cost = False
+        self.use_cross_entropy_cost = False
+        self.use_merged_softmax_cross_entropy_cost = True
 
         # Initialize Activation Function Settings
         # DEFAULT: ReLU for hidden layers and Sigmoid output layer
         self.use_leaky_relu = [True] * (len(self.w) - 1) + [False]
-        self.use_sigmoid = [False] * (len(self.w) - 1) + [True]
-        self.use_relu = [False] * len(self.w)
+        self.use_softmax = [False] * (len(self.w) - 1) + [True]
+        self.use_sigmoid = [False] * (len(self.w))
+        self.use_relu = [False] * (len(self.w))
         self.use_linear = [False] * len(self.w)
         self.use_tanh = [False] * len(self.w)
 
@@ -87,12 +89,12 @@ class neural_network():
             elif self.use_linear[i]: a = linear(z)
             elif self.use_tanh[i]: a = tanh(z)
             elif self.use_sigmoid[i]: a = sigmoid(z)
+            elif self.use_softmax[i]: a = softmax(z)
             else: a = ReLU(z)
             self.a.append(a)
 
         # Store prediction
         self.y_hat = self.a[len(self.a) - 1]
-        self.y_prob = self.y_hat / np.sum(self.y_hat, axis=0)
 
     # Function to perform backpropagation on network weights after a prediction has been stored in self.y_hat
     def learn(self, Y):
@@ -114,6 +116,8 @@ class neural_network():
             if self.use_huber_cost: dL = d_huber(Y, self.y_hat, self.huber_cost_delta)
             elif self.use_hellinger_cost: dL = d_hellinger(Y, self.y_hat)
             elif self.use_quadratic_cost: dL = d_quadratic(Y, self.y_hat)
+            elif self.use_cross_entropy_cost: dL = d_cross_entropy(Y, self.y_hat)
+            elif self.use_merged_softmax_cross_entropy_cost: dL = d_merged_softmax_cross_entropy(Y, self.y_hat)
             else: dL = d_hellinger(Y, self.y_hat)
 
             # Calculate Activation Function Derivative dA/dZ
@@ -122,14 +126,34 @@ class neural_network():
             elif self.use_relu[i]: dA = d_linear(self.z[i])
             elif self.use_tanh[i]: dA = d_tanh(self.z[i])
             elif self.use_sigmoid[i]: dA = d_sigmoid(self.z[i])
+            elif self.use_softmax[i]:
+                if self.use_merged_softmax_cross_entropy_cost: dA = 1 # softmax derivative combined with loss derivative
+                else: dA = d_softmax(self.z[i]) # returns softmax derivative matrix for special case handled below
             else: dA = d_sigmoid(self.z[i])
 
             # Calculated pre-activated node derivative
+            # Special Case handling for Softmax Error matrix (de-vectorized approach)
             if i == (len(self.w) - 1):
-                dz = dL * dA
+                if self.use_softmax[i] and not self.use_merged_softmax_cross_entropy_cost:
+                    dz = []
+                    for j in np.arange(len(dA)):
+                        dz.append(np.matmul(dL[:,j].reshape(1,-1), dA[j]))
+                    dz = np.array(dz).reshape(-1, m)
+                else:
+                    dz = dL * dA
+
                 prev_dz = dz
+
             else:
-                dz = np.matmul(self.w[i + 1].T, prev_dz) * dA
+                ness = np.matmul(self.w[i + 1].T, prev_dz)
+                if self.use_softmax[i] and not self.use_merged_softmax_cross_entropy_cost:
+                    dz = []
+                    for j in np.arange(len(dA)):
+                        dz.append(np.matmul(ness[:, j].reshape(1, -1), dA[j]))
+                    dz = np.array(dz).reshape(-1, m)
+                else:
+                    dz = ness * dA
+
                 prev_dz = dz
 
             # Calculate Weight Derivatives
@@ -165,6 +189,15 @@ def d_hellinger(Y, Y_hat):
 def d_quadratic(Y, Y_hat):
     return Y_hat - Y
 
+def d_cross_entropy(Y, Y_hat):
+    if 0 in (Y_hat * (np.ones(Y_hat.shape) - Y_hat)):
+        return np.zeros(Y_hat.shape)
+    else:
+        return np.divide((Y_hat - Y), (Y_hat * (np.ones(Y_hat.shape) - Y_hat)))
+
+def d_merged_softmax_cross_entropy(Y, Y_hat):
+    return Y_hat - Y
+
 ''' 
 ACTIVATION FUCNTIONS 
 '''
@@ -182,6 +215,10 @@ def tanh(x):
 
 def sigmoid(x):
     return 1/(1+np.exp(-1*x))
+
+def softmax(x):
+    safe_x = np.exp(x - np.max(x))
+    return safe_x / safe_x.sum()
 
 ''' 
 ACTIVATION FUCNTION DERIVATIVES 
@@ -201,3 +238,11 @@ def d_tanh(x):
 
 def d_sigmoid(x):
     return sigmoid(x)*(1 - sigmoid(x))
+
+def d_softmax(x):
+    derivs = []
+    smax = softmax(x)
+    for i in np.arange(smax.shape[1]):
+        derivs.append(np.diag(smax[:,i]) - smax[:,i] * smax[:,i].reshape(-1, 1) )
+
+    return derivs

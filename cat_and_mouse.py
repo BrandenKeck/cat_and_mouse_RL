@@ -428,14 +428,55 @@ class world():
     def set_player_timelimit_penalty(self, val): self.player_timelimit_penalty = val
     def set_goal_timelimit_reward(self, val): self.goal_timelimit_reward = val
 
-    ###
-    # AGENT LEARNING PARAM FUNCTIONS - APPLY TO BOTH PLAYERS AND GOALS
-    ###
-
     # Set Time Limit for each Simulation
     def set_timelimit(self, val):
         self.timelimit = val
         print("TIMELIMIT UPDATED TO " + str(val) + " ITERATIONS")
+
+    ###
+    # AGENT LEARNING PARAM FUNCTIONS - APPLY TO BOTH PLAYERS AND GOALS
+    ###
+
+    # Functions to set Learning Method (tabular types, network approx types, policy gradient types) for the agents
+    def set_global_learning_method(self, method):
+        for a in self.players + self.goals:
+            if method == "q_learning":
+                a.use_q_learning = True
+                a.use_dqn = False
+                a.use_ddqn = False
+            elif method == "dqn":
+                a.use_q_learning = False
+                a.use_dqn = True
+                a.use_ddqn = False
+            elif method == "ddqn":
+                a.use_q_learning = False
+                a.use_dqn = False
+                a.use_ddqn = True
+            else:
+                a.use_q_learning = False
+                a.use_dqn = False
+                a.use_ddqn = True
+    def set_agent_learning_method(self, name, method):
+        for a in self.players + self.goals:
+            if a.name == name:
+                if method == "q_learning":
+                    a.use_q_learning = True
+                    a.use_dqn = False
+                    a.use_ddqn = False
+                elif method == "dqn":
+                    a.use_q_learning = False
+                    a.use_dqn = True
+                    a.use_ddqn = False
+                elif method == "ddqn":
+                    a.use_q_learning = False
+                    a.use_dqn = False
+                    a.use_ddqn = True
+                else:
+                    a.use_q_learning = False
+                    a.use_dqn = False
+                    a.use_ddqn = True
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
 
     # Functions for setting the "alpha" (learning rate) parameter, either globally or to an agent by name
     def set_global_learning_rate(self, val):
@@ -563,7 +604,98 @@ class world():
     # AGENT NETWORK FUNCTIONS - APPLY TO BOTH PLAYERS AND GOALS
     ###
 
+    # Functions for setting the network layersizes
+    # AUTOMATICALLY RESETS LEARNING -- DESTROYS EXISTING NETWORKS
+    def set_global_qnetwork_hidden_layersizes(self, vals):
+        for a in self.players + self.goals:
+            a.qnetwork = None
+            a.qnetwork_hidden_layer_sizes = vals
+    def set_agent_qnetwork_hidden_layersizes(self, name, vals):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork = None
+                a.qnetwork_hidden_layer_sizes = vals
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
 
+    # Functions for setting the capacity (number of stored states/actions/rewards) of an agents' qnetwork replay memory
+    def set_global_qnetwork_replay_memory_capacity(self, val):
+        for a in self.players + self.goals:
+            a.qnetwork_replay_memory_capacity = val
+            if a.qnetwork != None: a.qnetwork.replay_memory_capacity = val
+    def set_agent_qnetwork_replay_memory_capacity(self, name, val):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork_replay_memory_capacity = val
+                if a.qnetwork != None: a.qnetwork.replay_memory_capacity = val
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
+
+    # Functions for setting the frequency (number of learning steps) before resetting DQN targets
+    def set_global_qnetwork_network_reset_frequency(self, val):
+        for a in self.players + self.goals:
+            a.qnetwork_network_reset_frequency = val
+            if a.qnetwork != None: a.qnetwork.network_reset_frequency = val
+    def set_agent_qnetwork_network_reset_frequency(self, name, val):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork_network_reset_frequency = val
+                if a.qnetwork != None: a.qnetwork.network_reset_frequency = val
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
+
+    # Functions for setting the number of previous transitions to use for DQN training in each training step
+    def set_global_qnetwork_network_minibatch_size(self, val):
+        for a in self.players + self.goals:
+            a.qnetwork_network_minibatch_size = val
+            if a.qnetwork != None: a.qnetwork.network_minibatch_size = val
+    def set_agent_qnetwork_network_minibatch_size(self, name, val):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork_network_minibatch_size = val
+                if a.qnetwork != None: a.qnetwork.network_minibatch_size = val
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
+
+    # Functions for setting the number of actions to take before each DQN training step
+    def set_global_qnetwork_network_training_delay(self, val):
+        for a in self.players + self.goals:
+            a.qnetwork_network_training_delay = val
+            if a.qnetwork != None: a.qnetwork.network_training_delay = val
+    def set_agent_qnetwork_network_training_delay(self, name, val):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork_network_training_delay = val
+                if a.qnetwork != None: a.qnetwork.network_training_delay = val
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
+
+    # Functions for setting the number of training iterations for each DQN training step
+    def set_global_qnetwork_network_training_iter(self, val):
+        for a in self.players + self.goals:
+            a.qnetwork_network_training_iter = val
+            if a.qnetwork != None: a.qnetwork.network_training_iter = val
+    def set_agent_qnetwork_network_training_iter(self, name, val):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork_network_training_iter = val
+                if a.qnetwork != None: a.qnetwork.network_training_iter = val
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
+
+    # Functions for setting the number of states to concatenate into a single preprocessed state for DQN training
+    # AUTOMATICALLY RESETS LEARNING -- DESTROYS EXISTING NETWORKS
+    def set_global_qnetwork_state_queue_length(self, val):
+        for a in self.players + self.goals:
+            a.qnetwork = None
+            a.qnetwork_state_queue_length = val
+    def set_agent_qnetwork_state_queue_length(self, name, val):
+        for a in self.players + self.goals:
+            if a.name == name:
+                a.qnetwork = None
+                a.qnetwork_state_queue_length = val
+                return
+        print("ERROR: PLAYER " + name + " NOT FOUND")
 
     ###
     # MISC FUNCTIONS

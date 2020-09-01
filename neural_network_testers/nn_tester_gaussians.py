@@ -32,9 +32,19 @@ X_train, X_test, Y_train, Y_test = train_test_split(XT, YT, test_size=0.2)
 X = np.array(X_train).T
 Y = np.array(Y_train).T
 
-myNet = neural_network([2, 8, 4, 3])
-myNet.training_batch_size = 10
-myNet.train_network(X, Y, 100000)
+learning_rates = [0.0005]
+errors = []
+aes = ['k-', 'r-', 'b-', 'g-', 'm-', 'k--', 'r--', 'b--', 'g--', 'm--', 'k-.', 'r-.', 'b-.', 'g-.', 'm-.', 'k.', 'r.', 'b.', 'g.', 'm.']
+for rate in learning_rates:
+    myNet = neural_network([2, 256, 128, 3])
+    myNet.training_batch_size = 1
+    myNet.learning_rates = rate * np.ones(6)
+    myNet.train_network(X, Y, 30000)
+    errors.append(myNet.mean_squared_errors)
+
+for i in np.arange(len(errors)):
+    plt.plot(errors[i], aes[i])
+plt.show()
 
 X = np.array(X_test).T
 Y = np.array(Y_test).T
