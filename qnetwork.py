@@ -221,11 +221,11 @@ class qnetwork():
             self.Q[i].use_quadratic_cost = False
             self.Q[i].use_cross_entropy_cost = False
             self.Q[i].use_merged_softmax_cross_entropy_cost = False
-            self.Q[i].use_leaky_relu = [True] * (len(layer_sizes) - 2) + [False]
+            self.Q[i].use_leaky_relu = [True] * (len(layer_sizes) - 2) + [True]
             self.Q[i].use_softmax = [False] * (len(layer_sizes) - 1)
-            self.Q[i].use_sigmoid = [False] * (len(layer_sizes) - 1)
+            self.Q[i].use_sigmoid = [False] * (len(layer_sizes) - 2) + [False]
             self.Q[i].use_relu = [False] * (len(layer_sizes) - 1)
-            self.Q[i].use_linear = [False] * (len(layer_sizes) - 2) + [True]
+            self.Q[i].use_linear = [False] * (len(layer_sizes) - 2) + [False]
             self.Q[i].use_tanh = [False] * (len(layer_sizes) - 1)
 
     # Function for updating rolling queues
@@ -238,7 +238,7 @@ class qnetwork():
     def plot_network_errors(self):
         aes = ['k-', 'r-', 'b-', 'g-', 'm-', 'k--', 'r--', 'b--', 'g--', 'm--', 'k-.', 'r-.', 'b-.', 'g-.', 'm-.', 'k.', 'r.', 'b.', 'g.', 'm.']
         for i, q in enumerate(self.Q):
-            plt.plot(np.arange(len(q.mean_squared_errors)), q.mean_squared_errors, aes[i])
+            plt.plot(np.arange(len(q.diag.mse)), q.diag.mse, aes[i])
 
         plt.show()
 

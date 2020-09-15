@@ -37,9 +37,11 @@ class player():
         self.alpha = 0.01
         self.gamma = 0.85
         self.last_action = 0
-        self.next_reward = 0
-        self.next_state = None
-        self.next_state_is_terminal = False
+        self.current_reward = 0
+        self.possible_next_states = []
+        self.possible_current_states = []
+        self.current_state = None
+        self.current_state_is_terminal = False
         self.current_policy = np.ones(num_actions)/num_actions
 
         # Learning object structure / storage parameters
@@ -124,28 +126,30 @@ class player():
         if self.use_q_learning:
 
             # Learn the QTable
-            self.qtable.q_learning(self.next_state, self.next_state_is_terminal, self.next_reward, self.last_action)
+            self.qtable.q_learning(self.current_state, self.current_state_is_terminal, self.current_reward, self.last_action)
             action_values = self.qtable.action_values[self.qtable.next_state_idx].tolist()
 
         # DQN Method uses the QNetwork Custom Class Object
         elif self.use_dqn:
 
             # Learn using DQN method
-            self.qnetwork.dqn(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal, self.next_reward, self.last_action)
+            self.qnetwork.dqn(np.array(self.current_state).flatten().tolist(), self.current_state_is_terminal, self.current_reward, self.last_action)
             action_values = self.qnetwork.action_values
 
         # DDQN Method uses the QNetwork Custom Class Object
         elif self.use_ddqn:
 
             # Learn using DDQN method
-            self.qnetwork.ddqn(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal,self.next_reward, self.last_action)
+            self.qnetwork.ddqn(np.array(self.current_state).flatten().tolist(), self.current_state_is_terminal, self.current_reward, self.last_action)
             action_values = self.qnetwork.action_values
+            #print(action_values)
 
         # REINFORCE Method uses the Policy Gradients Custom Class Object
         elif self.use_REINFORCE:
 
             # Learn using the REINFORCE method
-            self.policy_gradients.REINFORCE(np.array(self.next_state).flatten().tolist(), self.next_state_is_terminal,self.next_reward, self.last_action)
+            self.policy_gradients.use_REINFORCE = True
+            self.policy_gradients.learn_policy_gradient(self.possible_next_states, self.possible_current_states, np.array(self.current_state).flatten().tolist(), self.current_state_is_terminal, self.current_reward, self.last_action)
             action_values = self.policy_gradients.current_policy
 
         # Update Policy based on user settings
@@ -168,6 +172,7 @@ class player():
                 # Read stored player information if it exists
                 with open(self.name + ".txt", 'rb') as file:
                     qtable, qnetwork, policy_gradients = pickle.load(file)
+                policy_gradients.episodes = []
                 return qtable, qnetwork, policy_gradients
             except:
                 # Initialize empty player information if no file found

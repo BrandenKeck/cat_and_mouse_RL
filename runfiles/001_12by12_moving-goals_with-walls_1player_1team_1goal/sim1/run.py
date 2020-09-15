@@ -25,7 +25,7 @@ thisWorld.set_timelimit(-1)
 # Establish goal settings
 #thisWorld.set_goal_caught_penalty(-1000)
 #thisWorld.set_timestep_goal_reward(1)
-#thisWorld.set_movable_goals(True)
+# thisWorld.set_movable_goals(True)
 
 # Learning Params
 thisWorld.set_global_learning_rate(0.001)
@@ -41,7 +41,7 @@ thisWorld.add_agent_temporary_policy("Player_1", "e-greedy", 20, 0.25)
 thisWorld.add_agent_temporary_policy("Player_1", "e-greedy", 20, 0.1)
 '''
 # Run Pygame Simulation
-thisWorld.train_agents(10000)
+thisWorld.train_agents(1000)
 thisWorld.run_game()
 
 thisWorld.plot_agent_network_error("Player_1")

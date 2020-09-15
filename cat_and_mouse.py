@@ -1,6 +1,9 @@
 # Standard Imports
-import pygame, sys, os
+import sys, os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+import pygame
 import numpy as np
+from copy import deepcopy
 
 # Custom Class Imports
 import player, wall, spritesheet
@@ -135,15 +138,19 @@ class world():
             self.current_time = self.current_time + 1
             self.check_episode_completion()
 
+            # Get all possible next states
+            for p in self.players: p.possible_next_states = self.get_next_states(p, 1)
+            for g in self.goals: g.possible_next_states = self.get_next_states(g, -1)
+
             # Apply Learning to Players
             for p in self.players:
-                p.next_state = self.get_current_state(p.x, p.y, 1)
+                p.current_state = self.get_current_state(p.x, p.y, 1)
                 p.learn()
 
             # Apply Learning to Movable Goals
             if self.movable_goals:
                 for g in self.goals:
-                    g.next_state = self.get_current_state(g.x, g.y, -1)
+                    g.current_state = self.get_current_state(g.x, g.y, -1)
                     g.learn()
 
             # System Ready for next action
@@ -151,6 +158,9 @@ class world():
 
         # Check if all moves have completed before taking an action
         if self.take_action:
+
+            # Get all possible current states
+            for a in self.players + self.goals: a.possible_current_states = deepcopy(a.possible_next_states)
 
             # Act and Reward Functions
             self.attempt_agent_actions()
@@ -191,11 +201,11 @@ class world():
         if self.current_time >= self.timelimit and self.timelimit > 0:
 
             for p in self.players:
-                p.next_reward = self.player_timelimit_penalty
-                p.next_state_is_terminal = True
+                p.current_reward = self.player_timelimit_penalty
+                p.current_state_is_terminal = True
             for g in self.goals:
-                g.next_reward = self.goal_timelimit_reward
-                g.next_state_is_terminal = True
+                g.current_reward = self.goal_timelimit_reward
+                g.current_state_is_terminal = True
 
             # Reset simulation and print results
             self.reset()
@@ -208,17 +218,17 @@ class world():
         for p in self.players:
             for g in self.goals:
                 if p.x == g.x and p.y == g.y:
-                    p.next_reward = self.goal_captured_reward
-                    p.next_state_is_terminal = True
+                    p.current_reward = self.goal_captured_reward
+                    p.current_state_is_terminal = True
                     for pp in self.players:
                         if pp != p and p.team == pp.team:
-                            pp.next_reward = self.team_goal_captured_reward
+                            pp.current_reward = self.team_goal_captured_reward
                         elif pp != p and p.team != pp.team:
-                            pp.next_reward = self.opponent_goal_captured_penalty
-                        pp.next_state_is_terminal = True
+                            pp.current_reward = self.opponent_goal_captured_penalty
+                        pp.current_state_is_terminal = True
 
-                    g.next_reward = self.goal_caught_penalty
-                    g.next_state_is_terminal = True
+                    g.current_reward = self.goal_caught_penalty
+                    g.current_state_is_terminal = True
 
                     # Reset simulation and print results
                     self.reset()
@@ -227,20 +237,20 @@ class world():
 
                     return True
 
-                g.next_state_is_terminal = False
+                g.current_state_is_terminal = False
 
-            p.next_state_is_terminal = False
+            p.current_state_is_terminal = False
 
         return False
 
     # Runs Action Functions for all Agents
     def attempt_agent_actions(self):
         for p in self.players:
-            p.next_reward = 0
+            p.current_reward = 0
             p.act()
         if self.movable_goals:
             for g in self.goals:
-                g.next_reward = 0
+                g.current_reward = 0
                 g.act()
 
     # Border and Wall Collision Penalty for All Agents
@@ -251,11 +261,11 @@ class world():
             if a.target_x < 0 or a.target_x >= self.xsize:
                 a.target_x = a.x
                 a.target_pos_x = a.pos_x
-                a.next_reward = a.next_reward + self.border_collide_penalty
+                a.current_reward = a.current_reward + self.border_collide_penalty
             if a.target_y < 0 or a.target_y >= self.ysize:
                 a.target_y = a.y
                 a.target_pos_y = a.pos_y
-                a.next_reward = a.next_reward + self.border_collide_penalty
+                a.current_reward = a.current_reward + self.border_collide_penalty
 
             # Wall Collisions
             for w in self.walls:
@@ -264,15 +274,15 @@ class world():
                     a.target_y = a.y
                     a.target_pos_x = a.pos_x
                     a.target_pos_y = a.pos_y
-                    a.next_reward = a.next_reward + self.wall_collide_penalty
+                    a.current_reward = a.current_reward + self.wall_collide_penalty
 
     # Player - to - Player Collision Check
     def check_player_to_player_collisions(self):
         for p in self.players:
             for pp in self.players:
                 if pp != p and (p.target_x == pp.x and p.target_y == pp.y):
-                    if p.team == pp.team: p.next_reward = p.next_reward + self.teammate_collide_penalty
-                    else: p.next_reward = p.next_reward + self.opponent_collide_penalty
+                    if p.team == pp.team: p.current_reward = p.current_reward + self.teammate_collide_penalty
+                    else: p.current_reward = p.current_reward + self.opponent_collide_penalty
                     p.target_x = p.x
                     p.target_y = p.y
                     p.target_pos_x = p.pos_x
@@ -281,22 +291,63 @@ class world():
     # Player and goal rewards gradients
     def calculate_rewards_gradients(self):
         for p in self.players:
-            p.next_reward = p.next_reward + self.player_goal_reward_gradient_factor * (self.goal_rewards_gradient[p.target_x][p.target_y] - self.goal_rewards_gradient[p.x][p.y])
+            p.current_reward = p.current_reward + self.player_goal_reward_gradient_factor * (self.goal_rewards_gradient[p.target_x][p.target_y] - self.goal_rewards_gradient[p.x][p.y])
         for g in self.goals:
             if self.movable_goals:
-                g.next_reward = g.next_reward + self.goal_player_repulsion_factor * (self.goal_repulsion_gradient[g.x][g.y] - self.goal_repulsion_gradient[g.target_x][g.target_y])
+                g.current_reward = g.current_reward + self.goal_player_repulsion_factor * (self.goal_repulsion_gradient[g.x][g.y] - self.goal_repulsion_gradient[g.target_x][g.target_y])
 
     # Timestep penalties and rewards
     def calculate_timestep(self):
-        for p in self.players: p.next_reward = p.next_reward + self.timestep_player_penalty
-        for g in self.goals: g.next_reward = g.next_reward + self.timestep_goal_reward
+        for p in self.players: p.current_reward = p.current_reward + self.timestep_player_penalty
+        for g in self.goals: g.current_reward = g.current_reward + self.timestep_goal_reward
 
     # Check any attempt for a goal to move into an occupied space
     def check_movable_goal_collisions(self):
         for g in self.goals:
             for a in self.players + self.goals:
                 if g!=a and (g.target_x == a.x and g.target_y == a.y):
-                    g.next_reward = g.next_reward + self.goal_agent_collide_penalty
+                    g.current_reward = g.current_reward + self.goal_agent_collide_penalty
+
+    # Create a list of lists containing all possible next states for a given Player
+    def get_next_states(self, a, flip_sign):
+
+        # Initialize Next States List
+        next_states = []
+
+        # No Action Taken
+        next_states.append(self.get_current_state(a.x, a.y, flip_sign))
+
+        # Initialize Flags to determine if each move is possible
+        Directions = 4 * [True]
+
+        # Get a list of all relevant objects
+        objects = self.players + self.walls
+        if flip_sign == -1: objects = objects + self.goals
+
+        # Attempt Moves
+        for o in objects:
+            if (a != o and a.x == o.x and (a.y - 1) == o.y) or ((a.y - 1) < 0): Directions[0] = False
+            if (a != o and (a.x + 1) == o.x and a.y == o.y) or ((a.x + 1) >= self.xsize): Directions[1] = False
+            if (a != o and a.x == o.x and (a.y + 1)) == o.y or ((a.y + 1) >= self.ysize): Directions[2] = False
+            if (a != o and (a.x - 1) == o.x and a.y == o.y) or ((a.x - 1) < 0): Directions[3] = False
+
+        # Append North Action
+        if Directions[0]: next_states.append(self.get_current_state(a.x, a.y - 1, flip_sign))
+        else: next_states.append(self.get_current_state(a.x, a.y, flip_sign))
+
+        # Append East Action
+        if Directions[1]: next_states.append(self.get_current_state(a.x + 1, a.y, flip_sign))
+        else: next_states.append(self.get_current_state(a.x, a.y, flip_sign))
+
+        # Append South Action
+        if Directions[2]: next_states.append(self.get_current_state(a.x, a.y + 1, flip_sign))
+        else: next_states.append(self.get_current_state(a.x, a.y, flip_sign))
+
+        # Append West Action
+        if Directions[3]: next_states.append(self.get_current_state(a.x - 1, a.y, flip_sign))
+        else: next_states.append(self.get_current_state(a.x, a.y, flip_sign))
+
+        return next_states
 
     # Create 2D list representation of the current state
     def get_current_state(self, xx, yy, flip_sign):
@@ -308,7 +359,7 @@ class world():
         for w in self.walls:
             state[w.x][w.y] = 10
 
-        state[xx][yy] = flip_sign*100
+        state[xx][yy] = flip_sign*-100
 
         return np.array(state).flatten().tolist()
 

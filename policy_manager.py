@@ -38,11 +38,11 @@ class policy_manager():
                 return normalized_q_table_soft_policy(action_values)
             else:
                 return normalized_q_table_soft_policy(action_values)
-        elif self.policy_type[len(self.policy_type)-1] == 1:
+        elif self.policy_type[0] == 1:
             return random_policy(action_values)
-        elif self.policy_type[len(self.policy_type)-1] == 2:
+        elif self.policy_type[0] == 2:
             return e_greedy_policy(action_values, self.epsilons[len(self.epsilons)-1])
-        elif self.policy_type[len(self.policy_type) - 1] == 3:
+        elif self.policy_type[0] == 3:
             return normalized_q_table_soft_policy(action_values)
         else:
             return normalized_q_table_soft_policy(action_values)
@@ -50,7 +50,7 @@ class policy_manager():
     def update_policies(self):
         if self.num_cycles != []:
             self.cycle_counter = self.cycle_counter + 1
-            if self.cycle_counter > self.num_cycles[len(self.num_cycles)-1]:
+            if self.cycle_counter > self.num_cycles[0]:
                 self.policy_type.pop(0)
                 self.num_cycles.pop(0)
                 self.epsilons.pop(0)
@@ -68,7 +68,6 @@ def random_policy(action_values):
     return policy
 
 def e_greedy_policy(action_values, e):
-
     n = len(action_values)
     policy = np.zeros(n)
 

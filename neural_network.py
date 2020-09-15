@@ -1,4 +1,8 @@
+# Standard Imports
 import numpy as np
+
+# Custom Imports
+from diagnostics import network_diagnostics
 
 # Neural Network Class for Feature Approximation in Reinforcement Learning
 class neural_network():
@@ -43,10 +47,9 @@ class neural_network():
         self.use_linear = [False] * len(self.w)
         self.use_tanh = [False] * len(self.w)
 
-        # Error Tracking - Diagnostics
-        self.mean_squared_errors = []
-        self.relative_squared_errors = []
-        self.number_of_stored_errors = 500000
+        # Track Variables with a Diagnostics Class
+        self.diag = network_diagnostics()
+
 
     # Function to perform NN training steps (iterative prediction / backpropagation)
     def train_network(self, data, labels, iter):
@@ -90,7 +93,7 @@ class neural_network():
             elif self.use_tanh[i]: a = tanh(z)
             elif self.use_sigmoid[i]: a = sigmoid(z)
             elif self.use_softmax[i]: a = softmax(z)
-            else: a = ReLU(z)
+            else: a = sigmoid(z)
             self.a.append(a)
 
         # Store prediction
@@ -103,11 +106,10 @@ class neural_network():
         if Y.ndim == 1:
             Y.shape = (1, -1)
 
-        # Store number of datapoints
+        # Store number of datapoints, create tracking variables
         m = Y.shape[1]
-
-        # Calculate and Store Error - Diagnostics
-        self.error_calc(Y)
+        dws = []
+        dbs = []
 
         # Loop over layers backwards
         for i in np.flip(np.arange(len(self.w))):
@@ -123,7 +125,7 @@ class neural_network():
             # Calculate Activation Function Derivative dA/dZ
             if self.use_leaky_relu[i]: dA = d_leaky_ReLU(self.z[i], self.leaky_relu_rates[i])
             elif self.use_relu[i]: dA = d_ReLU(self.z[i])
-            elif self.use_relu[i]: dA = d_linear(self.z[i])
+            elif self.use_linear[i]: dA = d_linear(self.z[i])
             elif self.use_tanh[i]: dA = d_tanh(self.z[i])
             elif self.use_sigmoid[i]: dA = d_sigmoid(self.z[i])
             elif self.use_softmax[i]:
@@ -158,23 +160,16 @@ class neural_network():
 
             # Calculate Weight Derivatives
             dw = (1/m) * np.matmul(dz, self.a[i].T)
+            dws.append(dw)
             db = (1/m) * np.sum(dz, axis=1, keepdims=True)
+            dbs.append(db)
 
             # Apply Learning Functions
             self.w[i] = self.w[i] - self.learning_rates[i] * dw
             self.b[i] = self.b[i] - self.learning_rates[i] * db
 
-    # Function to calculate error and append to error storage
-    def error_calc(self, Y):
-
-        # Calculate Mean Squared Error
-        sqr_err = (self.y_hat - Y)**2
-        sum_sqr_err = np.sum(sqr_err)
-        self.mean_squared_errors.append(sum_sqr_err/len(Y))
-        while len(self.mean_squared_errors) > self.number_of_stored_errors:
-            self.mean_squared_errors.pop(0)
-
-
+        # Calculate and Store Error - Diagnostics
+        self.diag.run_diag(self.y_hat, Y)
 '''
 COST FUNCTION DERIVATIVES
 '''
