@@ -47,9 +47,6 @@ class neural_network():
         self.use_linear = [False] * len(self.w)
         self.use_tanh = [False] * len(self.w)
 
-        # Track Variables with a Diagnostics Class
-        self.diag = network_diagnostics()
-
 
     # Function to perform NN training steps (iterative prediction / backpropagation)
     def train_network(self, data, labels, iter):
@@ -78,12 +75,17 @@ class neural_network():
         # Empty stored training values
         self.a = [X]
         self.z = []
-
+        #print("FORWARD START")
         # Loop over all layers
         for i in np.arange(len(self.layersizes) - 1):
 
             # Calculate Z (pre-activated node values for layer)
-            z = np.matmul(self.w[i], self.a[i])
+            #print("W: " + str(self.w[i].shape))
+            #print("A: " + str(self.a[i].shape))
+            #print("Original B: " + str(self.b[i].shape))
+            #print("Broadcast B: " + str(np.broadcast_to(self.b[i], (self.training_batch_size, self.b[i].shape[0])).transpose().shape))
+            z = np.matmul(self.w[i], self.a[i]) + np.broadcast_to(self.b[i], (self.training_batch_size, self.b[i].shape[0])).transpose()
+            #print("Z: " + str(z.shape))
             self.z.append(z)
 
             # Calculate A (activated node values for layer)
@@ -98,6 +100,8 @@ class neural_network():
 
         # Store prediction
         self.y_hat = self.a[len(self.a) - 1]
+        #print("Y_hat: " + str(self.y_hat.shape))
+        #print("FORWARD END")
 
     # Function to perform backpropagation on network weights after a prediction has been stored in self.y_hat
     def learn(self, Y):
@@ -108,20 +112,20 @@ class neural_network():
 
         # Store number of datapoints, create tracking variables
         m = Y.shape[1]
-        dws = []
-        dbs = []
-
+        #print("BACKWARD START")
+        #print("Y: " + str(Y.shape))
+        
+        # Calculate Loss Function Derivatiove dL/dA
+        if self.use_huber_cost: dL = d_huber(Y, self.y_hat, self.huber_cost_delta)
+        elif self.use_hellinger_cost: dL = d_hellinger(Y, self.y_hat)
+        elif self.use_quadratic_cost: dL = d_quadratic(Y, self.y_hat)
+        elif self.use_cross_entropy_cost: dL = d_cross_entropy(Y, self.y_hat)
+        elif self.use_merged_softmax_cross_entropy_cost: dL = d_merged_softmax_cross_entropy(Y, self.y_hat)
+        else: dL = d_hellinger(Y, self.y_hat)
+        
         # Loop over layers backwards
         for i in np.flip(np.arange(len(self.w))):
-
-            # Calculate Loss Function Derivatiove dL/dA
-            if self.use_huber_cost: dL = d_huber(Y, self.y_hat, self.huber_cost_delta)
-            elif self.use_hellinger_cost: dL = d_hellinger(Y, self.y_hat)
-            elif self.use_quadratic_cost: dL = d_quadratic(Y, self.y_hat)
-            elif self.use_cross_entropy_cost: dL = d_cross_entropy(Y, self.y_hat)
-            elif self.use_merged_softmax_cross_entropy_cost: dL = d_merged_softmax_cross_entropy(Y, self.y_hat)
-            else: dL = d_hellinger(Y, self.y_hat)
-
+            #print("BEGIN LAYER: " + str(i))
             # Calculate Activation Function Derivative dA/dZ
             if self.use_leaky_relu[i]: dA = d_leaky_ReLU(self.z[i], self.leaky_relu_rates[i])
             elif self.use_relu[i]: dA = d_ReLU(self.z[i])
@@ -135,6 +139,7 @@ class neural_network():
 
             # Calculated pre-activated node derivative
             # Special Case handling for Softmax Error matrix (de-vectorized approach)
+            
             if i == (len(self.w) - 1):
                 if self.use_softmax[i] and not self.use_merged_softmax_cross_entropy_cost:
                     dz = []
@@ -143,7 +148,9 @@ class neural_network():
                     dz = np.array(dz).reshape(-1, m)
                 else:
                     dz = dL * dA
-
+                #print("dL: " + str(dL.shape))
+                #print("dA: " + str(dA.shape))
+                #print("dz: " + str(dz.shape))
                 prev_dz = dz
 
             else:
@@ -155,21 +162,30 @@ class neural_network():
                     dz = np.array(dz).reshape(-1, m)
                 else:
                     dz = ness * dA
-
+                #print("w: " + str(self.w[i + 1].T.shape))
+                #print("prev_dz: " + str(prev_dz.shape))
+                #print("dA: " + str(dA.shape))
+                #print("dz: " + str(dz.shape))
                 prev_dz = dz
 
             # Calculate Weight Derivatives
-            dw = (1/m) * np.matmul(dz, self.a[i].T)
-            dws.append(dw)
-            db = (1/m) * np.sum(dz, axis=1, keepdims=True)
-            dbs.append(db)
-
+            #print("A: " + str(self.a[i].T.shape))
+            #print("w: " + str(self.w[i].shape))
+            #print("b: " + str(self.b[i].shape))
             # Apply Learning Functions
+            dw = (1/m) * np.matmul(dz, self.a[i].T)
+            db = ((1/m) * np.sum(dz, axis=1, keepdims=True)).reshape((self.b[i].shape[0],))
             self.w[i] = self.w[i] - self.learning_rates[i] * dw
             self.b[i] = self.b[i] - self.learning_rates[i] * db
+            
+            
+            #print("dw: " + str(dw.shape))
+            #print("db: " + str(db.shape))
+            #print("b After: " + str(self.b[i].shape))
+            #print("LAYER END")
+        #print("BACKWARD END")
+        #input()
 
-        # Calculate and Store Error - Diagnostics
-        self.diag.run_diag(self.y_hat, Y)
 '''
 COST FUNCTION DERIVATIVES
 '''

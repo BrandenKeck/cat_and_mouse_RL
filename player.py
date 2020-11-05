@@ -59,9 +59,9 @@ class player():
         self.save_after_iter_counter = self.save_after_iter
 
         # Learning Settings for the agent
-        self.use_q_learning = False
+        self.use_q_learning = True
         self.use_dqn = False
-        self.use_ddqn = True
+        self.use_ddqn = False
         self.use_REINFORCE = False
 
     '''-----------------

@@ -33,12 +33,18 @@ X = np.array(X_train).T
 Y = np.array(Y_train).T
 
 learning_rates = [0.0005]
+errors = []
 aes = ['k-', 'r-', 'b-', 'g-', 'm-', 'k--', 'r--', 'b--', 'g--', 'm--', 'k-.', 'r-.', 'b-.', 'g-.', 'm-.', 'k.', 'r.', 'b.', 'g.', 'm.']
 for rate in learning_rates:
     myNet = neural_network([2, 256, 128, 3])
     myNet.training_batch_size = 1
     myNet.learning_rates = rate * np.ones(6)
     myNet.train_network(X, Y, 30000)
+    errors.append(myNet.mean_squared_errors)
+
+for i in np.arange(len(errors)):
+    plt.plot(errors[i], aes[i])
+plt.show()
 
 X = np.array(X_test).T
 Y = np.array(Y_test).T
