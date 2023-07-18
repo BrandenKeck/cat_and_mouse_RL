@@ -210,7 +210,7 @@ class world():
             # Reset simulation and print results
             self.reset()
             self.episode_count = self.episode_count + 1
-            print("Completed Episodes:  " + str(self.episode_count) + " (EPISODE TIMEOUT)")
+            print("(EPISODE TIMEOUT) Completed Episodes:  " + str(self.episode_count))
 
             return True
 
@@ -233,7 +233,8 @@ class world():
                     # Reset simulation and print results
                     self.reset()
                     self.episode_count = self.episode_count + 1
-                    print("Completed Episodes:  " + str(self.episode_count))
+                    if self.episode_count%500 == 0:
+                        print("Completed Episodes:  " + str(self.episode_count))
 
                     return True
 
@@ -430,7 +431,7 @@ class world():
 
     # Import image data and set to variables (Cat / Mouse / Wall characters)
     def set_images(self):
-        os.chdir(os.path.dirname(sys.argv[0]))
+        # os.chdir(os.path.dirname(sys.argv[0]))
         self.player_imgs = spritesheet.make_sprite_array(spritesheet.spritesheet('../../../img/cats.png'), 5, 25, 25)
         self.goal_imgs = spritesheet.make_sprite_array(spritesheet.spritesheet('../../../img/mouse.png'), 1, 25, 25)
         self.wall_imgs = spritesheet.make_sprite_array(spritesheet.spritesheet('../../../img/wall.png'), 1, 25, 25)

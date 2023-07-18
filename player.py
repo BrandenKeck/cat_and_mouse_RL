@@ -142,7 +142,6 @@ class player():
             # Learn using DDQN method
             self.qnetwork.ddqn(np.array(self.current_state).flatten().tolist(), self.current_state_is_terminal, self.current_reward, self.last_action)
             action_values = self.qnetwork.action_values
-            #print(action_values)
 
         # REINFORCE Method uses the Policy Gradients Custom Class Object
         elif self.use_REINFORCE:

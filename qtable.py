@@ -27,7 +27,6 @@ class qtable():
     def q_learning(self, next_state, next_state_is_terminal, next_reward, last_action):
 
         # Handle First Pass
-        print(next_state)
         if next_state == None: return
 
         # Attempt to find q table for the current state
